@@ -280,6 +280,237 @@ select a.fullname emp_name,b.fullname manger_name from project A join project B
 on a.managerid=b.employeeid;
 
 
+/* Day 8
+Create table facility. Add the below fields into it.
+●	Facility_ID
+●	Name
+●	State
+●	Country
+
+i) Alter the table by adding the primary key and auto increment to Facility_ID column.
+ii) Add a new column city after name with data type as varchar which should not accept any null values. */
+
+create table facility (Facility_ID int,Name varchar(30), State varchar(30),Country varchar(30));
+
+alter table facility modify column facility_id int primary key auto_increment;
+alter table facility add column city varchar(40)  not null after name;
+
+desc facility;
+
+
+/* Create table university with below fields.
+●	ID
+●	Name */
+
+Create table University (ID int, Name varchar(50));
+insert into university values 
+(1, "       Pune          University     "), 
+(2, "  Mumbai          University     "),
+(3, "     Delhi   University     "),
+(4, "Madras University"),
+(5, "Nagpur University");
+select * from university;
+
+-- Remove the spaces from everywhere and update the column like Pune University
+
+select ID,length(trim(name)) from university;
+select Id,length(name) from university;
+
+select id,right(trim(name), locate(" ",reverse(trim(name)))) second_name from university;
+select id,reverse(trim(name)) from university;
+
+
+select id,concat(trim(left(trim(name),locate(" ",trim(name)))),right(trim(name),locate(" ",reverse(trim(name)))))
+full_name from university;
+
+
+/* Day 9
+Create table university with below fields.
+●	ID
+●	Name
+Add the below data into it as it is.
+INSERT INTO University
+VALUES (1, "       Pune          University     "), 
+               (2, "  Mumbai          University     "),
+              (3, "     Delhi   University     "),
+              (4, "Madras University"),
+              (5, "Nagpur University");
+Remove the spaces from everywhere and update the column like Pune University etc.
+ */
+ create table university (id int,name varchar(50));
+ select * from university;
+ 
+ select left(trim(name),locate(' ',trim(name))) from university;
+ select reverse(left(reverse(trim(name)),locate(' ',reverse(trim(name))))) from university;
+ select id,concat(left(trim(name),locate(' ',trim(name))),reverse(left(reverse(trim(name)),locate(' ',reverse(trim(name)))))) name from university;
+
+
+
+/* Day 10
+Create the view products status. Show year wise total products sold. Also find the percentage of total value for each year. */
+
+select * from products;
+select * from orderdetails;
+select * from orders;
+
+create view `products status` as
+select year(o.orderdate) years,concat(count(*),' ','(',truncate(count(od.productcode)/(select count(*) from orderdetails) * 100,2),'%',')')
+ value from orders o left join orderdetails od
+using(ordernumber)
+left join products p using (productcode)
+group by years;
+select * from `products status`;
+
+
+
+/* Day 11
+1)	Create a stored procedure GetCustomerLevel which takes input as customer number and gives the output as either Platinum, 
+Gold or Silver as per below criteria.
+Table: Customers
+
+●	Platinum: creditLimit > 100000
+●	Gold: creditLimit is between 25000 to 100000
+●	Silver: creditLimit < 25000 */
+
+select * from customers;
+
+DELIMITER //
+
+create procedure getcustomerlevel( in c_number int, out c_level varchar(30))
+
+begin
+select case when creditLimit > 100000 then 'platinum'
+when creditlimit between 25000 and 100000 then 'Gold'
+when creditlimit < 25000 then 'Silver'
+end into c_level  from customers
+where customernumber = c_number;
+end //
+DELIMITER ;
+drop procedure getcustomerlevel;
+call getcustomerlevel(103,@c_level);
+select @c_level;
+
+
+/* 2)	Create a stored procedure Get_country_payments which takes in year and country as inputs and gives year wise, 
+country wise total amount as an output. Format the total amount to nearest thousand unit (K)
+Tables: Customers, Payments. */
+
+select * from customers;
+select * from payments;
+
+DELIMITER //
+
+create procedure get_country_payments(IN input_year int,out `total amount` varchar(30),in input_country varchar(30))
+begin
+select  concat(format(sum(p.amount)/1000,2),'K') into `total amount`
+from customers C inner join payments p using (customernumber)
+where year(p.paymentdate) = input_year and c.country = input_country;
+
+end //
+DELIMITER ;
+drop procedure get_country_payments;
+
+call get_country_payments(2003,@`total amount` ,'France');
+select @`total amount`;
+
+
+select * from payments;
+
+
+/* Day 12
+1)	Calculate year wise, month name wise count of orders and year over year (YoY) percentage change. 
+Format the YoY values in no decimals and show in % sign.
+Table: Orders */
+
+select * from orders;
+
+
+
+/* 2)	Create the table emp_udf with below fields.
+
+●	Emp_ID
+●	Name
+●	DOB
+Add the data as shown in below query.
+INSERT INTO Emp_UDF(Name, DOB)
+VALUES ("Piyush", "1990-03-30"), ("Aman", "1992-08-15"), ("Meena", "1998-07-28"), ("Ketan", "2000-11-21"), ("Sanjay", "1995-05-21");
+
+Create a user defined function calculate_age which returns the age in years and months (e.g. 30 years 5 months) by accepting DOB column as a parameter. */
+
+create table emp_udf(emp_ID int unique auto_increment,Name varchar(50),DOB date) auto_increment= 100;
+insert into emp_udf(name,DOB) values
+("Piyush", "1990-03-30"), ("Aman", "1992-08-15"), ("Meena", "1998-07-28"), ("Ketan", "2000-11-21"), ("Sanjay", "1995-05-21");
+select * from emp_udf;
+
+DELIMITER //
+
+create function Calculate_age (DOB Date)
+returns varchar(50)
+deterministic
+begin
+declare years int;
+declare months int;
+declare age varchar(50);
+set years = timestampdiff(year,dob,curdate());
+set months = timestampdiff(month,dob,curdate())-(years*12);
+set age = concat(years,' ','years',' ',months,' ','months');
+return age;
+end //
+DELIMITER ;
+
+select calculate_age('1990-03-30') age;
+
+-- other approach 
+
+DELIMITER //
+create function cal_age(dob date)
+returns varchar(50)
+deterministic
+begin
+declare age varchar(50);
+set age = concat(timestampdiff(year,dob,curdate()),' ','years',' ',timestampdiff(month,dob,curdate())-(timestampdiff(year,dob,curdate()) *12),' ','months');
+return age;
+end //
+DELIMITER ;
+select cal_age('1990-03-30') age;
+
+
+/* Day 13
+1)	Display the customer numbers and customer names from customers table who have not placed any orders using subquery */
+
+select * from customers;
+select * from orders order by customernumber asc;
+
+select customernumber,customername from customers
+where customernumber not in (select distinct(customernumber) from orders);
+
+-- 2) Write a full outer join between customers and orders using union and get the customer number, customer name, count of orders for every customer.
+
+select c.customernumber,customername,count(*) total_orders from customers c left join orders o
+using (customernumber)
+group by c.customernumber,c.customername
+union
+select o.customernumber,c.customername,count(*) total_orders from orders o left join customers c
+using (customernumber)
+group by o.customernumber,c.customername;
+
+
+-- 3)	Show the second highest quantity ordered value for each order number.
+
+select * from orderdetails;
+select max(quantityordered*priceeach) max_price from orderdetails
+where (quantityordered*priceeach) < (select max(quantityordered*priceeach) from orderdetails);
+
+SELECT orderNumber, MAX(quantityOrdered) AS second_highest_quantity
+FROM (
+    SELECT orderNumber, quantityOrdered,
+           ROW_NUMBER() OVER (PARTITION BY orderNumber ORDER BY quantityOrdered DESC) AS rn
+    FROM orderdetails
+) AS ranked
+WHERE rn = 2
+GROUP BY orderNumber;
+
+-- 4) For each order number count the number of products and then find the min and max of the values among count of orders.
 
 
 
@@ -287,4 +518,16 @@ on a.managerid=b.employeeid;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+ 
 
