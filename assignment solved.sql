@@ -77,12 +77,12 @@ group by  years,quarters;
 /* 3)	Show the formatted amount in thousands unit (e.g. 500K, 465K etc.) for every month (e.g. Jan, Feb etc.) 
 with filter on total amount as 500000 to 1000000. Sort the output by total amount in descending mode */
 
-select * from payments;
-
-select date_format(paymentdate,'%b') months, concat(format(sum(amount)/1000,0),'K') amount
-from payments
-group by months
+select * from payments
 order by amount desc;
+select date_format(paymentDate,'%b') months,concat(format(sum(amount)/1000,0),'K') total from  payments
+group by months
+having sum(amount) between 500000 and 1000000
+order by total desc;
 
 
 /* Day 6:
@@ -425,6 +425,23 @@ Table: Orders */
 select * from orders;
 
 
+SELECT 
+    years,
+    months,
+    order_count,
+    Revenue_previous_year,
+    CONCAT(ROUND((order_count - Revenue_previous_year) / Revenue_previous_year * 100), '%') AS yoy_percentage_change
+FROM (SELECT 
+YEAR(orderdate) AS years,
+MONTHNAME(orderdate) AS months,
+COUNT(*) AS order_count,
+LAG(COUNT(*)) OVER (ORDER BY YEAR(orderdate))  Revenue_previous_year  FROM orders
+GROUP BY years, months) AS order2;
+
+
+
+
+
 
 /* 2)	Create the table emp_udf with below fields.
 
@@ -502,19 +519,102 @@ select max(quantityordered*priceeach) max_price from orderdetails
 where (quantityordered*priceeach) < (select max(quantityordered*priceeach) from orderdetails);
 
 SELECT orderNumber, MAX(quantityOrdered) AS second_highest_quantity
-FROM (
-    SELECT orderNumber, quantityOrdered,
+FROM (SELECT orderNumber, quantityOrdered,
            ROW_NUMBER() OVER (PARTITION BY orderNumber ORDER BY quantityOrdered DESC) AS rn
-    FROM orderdetails
-) AS ranked
+    FROM orderdetails) AS ranked
 WHERE rn = 2
 GROUP BY orderNumber;
 
 -- 4) For each order number count the number of products and then find the min and max of the values among count of orders.
 
 
+select * from orderdetails;
+
+select max(product_count),min(product_count) from (select ordernumber,count(productCode) product_count from orderdetails group by ordernumber) order_details;
 
 
+/* 5)	Find out how many product lines are there for which the buy price value is greater than the average of buy price value.
+ Show the output as product line and its count. */
+
+ select * from productlines;
+ select * from products;
+ select * from orders;
+ 
+ select productline,count(*) total from products
+ where buyprice > (select avg(buyprice)  from products)
+ group by productline
+ order by total desc;
+ 
+ 
+ /* Day 14
+Create the table Emp_EH. Below are its fields.
+●	EmpID (Primary Key)
+●	EmpName
+●	EmailAddress
+Create a procedure to accept the values for the columns in Emp_EH. Handle the error using exception handling concept. 
+Show the message as “Error occurred” in case of anything wrong. */
+
+create table Emp_EH (EmpID int,EmpName varchar(50),EmailAddress varchar(50),primary key (EmpID));
+select * from emp_eh;
+desc emp_eh;
+
+DELIMITER //
+create procedure input_data(in EmpID int,in EmpName varchar(50), in EmailAddress varchar(50))
+begin
+declare exit handler for 1062
+begin
+SELECT CONCAT('Error occurred: ', EmpID, ',', EmpName, ',', EmailAddress) as message;
+end;
+insert into Emp_EH values (EmpID,EmpName,EmailAddress);
+select * from Emp_EH;
+end //
+DELIMITER ;
+call input_data (1,'nalanda','nalanda@gmail.com');
+call input_data (1,'nalanda','nalanda@gmail.com');
+
+
+/* Day 15
+Create the table Emp_BIT. Add below fields in it.
+●	Name
+●	Occupation
+●	Working_date
+●	Working_hours
+
+Insert the data as shown in below query.
+INSERT INTO Emp_BIT VALUES
+('Robin', 'Scientist', '2020-10-04', 12),  
+('Warner', 'Engineer', '2020-10-04', 10),  
+('Peter', 'Actor', '2020-10-04', 13),  
+('Marco', 'Doctor', '2020-10-04', 14),  
+('Brayden', 'Teacher', '2020-10-04', 12),  
+('Antonio', 'Business', '2020-10-04', 11);  
+ 
+Create before insert trigger to make sure any new value of Working_hours, if it is negative, 
+then it should be inserted as positive. */
+
+create table Emp_BIT(Name varchar(50),Occupaion varchar(50),Working_data date,Working_hours int);
+INSERT INTO Emp_BIT VALUES
+('Robin', 'Scientist', '2020-10-04', 12),  
+('Warner', 'Engineer', '2020-10-04', 10),  
+('Peter', 'Actor', '2020-10-04', 13),  
+('Marco', 'Doctor', '2020-10-04', 14),  
+('Brayden', 'Teacher', '2020-10-04', 12),  
+('Antonio', 'Business', '2020-10-04', 11);
+
+select * from EMP_BIT;
+
+DELIMITER //
+create trigger Input_positivedata
+before insert on Emp_BIT for each row
+Begin 
+if new.Working_hours < 0 then set new.Working_hours = abs(new.Working_hours);
+elseif new.Working_hours  is null then set new.working_hours = 0;
+end if;
+end //
+DELIMITER ;
+insert into emp_BIT values ('Nalanda', 'Recruiter', '2024-03-01', -6);
+
+ 
 
 
 
